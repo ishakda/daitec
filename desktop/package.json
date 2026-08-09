@@ -1,0 +1,61 @@
+{
+  "name": "daitec-desktop",
+  "productName": "Daitec",
+  "version": "1.0.0",
+  "description": "Daitec \u2014 Gestion commerciale (application de bureau)",
+  "author": "Daitec",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "node genicon.js && electron-builder --win",
+    "prepack-icons": "node genicon.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "dz.daitec.app",
+    "productName": "Daitec",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "setup.html",
+      "icon.png",
+      "icon.ico",
+      "genicon.js"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Daitec",
+      "warningsAsErrors": false,
+      "installerLanguages": [
+        "fr_FR",
+        "en_US"
+      ]
+    }
+  }
+}

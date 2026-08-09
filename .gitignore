@@ -1,0 +1,17 @@
+# dependencies & builds
+node_modules/
+.next/
+out/
+
+# env & secrets
+.env
+.env.local
+.env*.local
+
+# artifacts
+*.tar.gz
+*.png
+*.log
+
+# misc
+.DS_Store

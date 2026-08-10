@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Daitec — PIN</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #14263f; color: #fff;
+         display: flex; align-items: center; justify-content: center; min-height: 96vh; margin: 0; }
+  .card { text-align: center; width: 340px; }
+  h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: -.01em; }
+  p { font-size: 13px; color: rgba(255,255,255,.55); margin: 0 0 22px; }
+  input { width: 200px; height: 52px; text-align: center; font-size: 26px; letter-spacing: 10px;
+          border: 1.5px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff;
+          border-radius: 12px; outline: none; }
+  input:focus { border-color: #18b19e; }
+  .row { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+  button { height: 42px; padding: 0 22px; border-radius: 10px; border: 0; font-size: 14px;
+           font-weight: 600; cursor: pointer; }
+  .ok { background: #0e7569; color: #fff; } .ok:hover { background: #0a5c52; }
+  .back { background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); }
+  .err { color: #ff8f85; font-size: 13px; margin-top: 12px; min-height: 17px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sortie du mode kiosque</h1>
+    <p>Entrez le PIN administrateur</p>
+    <input id="pin" type="password" inputmode="numeric" maxlength="8" autofocus />
+    <div class="err" id="err"></div>
+    <div class="row">
+      <button class="back" id="back">Retour caisse</button>
+      <button class="ok" id="go">Déverrouiller</button>
+    </div>
+  </div>
+  <script>
+    const pin = document.getElementById("pin");
+    const err = document.getElementById("err");
+    async function unlock() {
+      err.textContent = "";
+      const r = await window.daitecDesktop.exitKiosk(pin.value.trim());
+      if (!r.ok) { err.textContent = r.error; pin.value = ""; pin.focus(); }
+    }
+    async function back() {
+      const c = await window.daitecDesktop.getConfig();
+      location.href = new URL("/pos", c.serverUrl).toString();
+    }
+    document.getElementById("go").addEventListener("click", unlock);
+    document.getElementById("back").addEventListener("click", back);
+    pin.addEventListener("keydown", (e) => e.key === "Enter" && unlock());
+  </script>
+</body>
+</html>

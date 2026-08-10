@@ -7,14 +7,20 @@
   body { font-family: system-ui, sans-serif; background: #f7f8fa; color: #101828;
          display: flex; align-items: center; justify-content: center; min-height: 96vh; margin: 0; }
   .card { background: #fff; border: 1px solid #e4e7ec; border-radius: 16px; padding: 34px 38px;
-          width: 430px; box-shadow: 0 1px 2px rgb(16 24 40 / .05); }
+          width: 440px; box-shadow: 0 1px 2px rgb(16 24 40 / .05); }
   h1 { font-size: 22px; margin: 0 0 2px; color: #14263f; letter-spacing: -.02em; }
   p { font-size: 13px; color: #667085; margin: 4px 0 20px; line-height: 1.5; }
-  label { display: block; font-size: 13px; font-weight: 600; color: #475467; margin-bottom: 6px; }
-  input { width: 100%; box-sizing: border-box; height: 42px; border: 1px solid #d0d5dd; border-radius: 10px;
-          padding: 0 12px; font-size: 14px; outline: none; }
+  label { display: block; font-size: 13px; font-weight: 600; color: #475467; margin: 14px 0 6px; }
+  input[type=url], input[type=password] { width: 100%; box-sizing: border-box; height: 42px;
+          border: 1px solid #d0d5dd; border-radius: 10px; padding: 0 12px; font-size: 14px; outline: none; }
   input:focus { border-color: #0e7569; box-shadow: 0 0 0 3px rgb(14 117 105 / .12); }
-  button { margin-top: 16px; width: 100%; height: 42px; background: #0e7569; color: #fff; border: 0;
+  .kiosk { margin-top: 18px; border: 1px solid #e4e7ec; border-radius: 12px; padding: 14px 16px; }
+  .kiosk-head { display: flex; align-items: center; gap: 9px; }
+  .kiosk-head input { width: 17px; height: 17px; accent-color: #0e7569; }
+  .kiosk-head span { font-size: 13.5px; font-weight: 600; color: #14263f; }
+  .kiosk small { display: block; font-size: 12px; color: #98a2b3; margin-top: 6px; line-height: 1.45; }
+  #pinRow { display: none; }
+  button { margin-top: 18px; width: 100%; height: 42px; background: #0e7569; color: #fff; border: 0;
            border-radius: 10px; font-size: 14.5px; font-weight: 600; cursor: pointer; }
   button:hover { background: #0a5c52; }
   .err { color: #b42318; font-size: 12.5px; margin-top: 8px; min-height: 16px; }
@@ -24,26 +30,62 @@
 <body>
   <div class="card">
     <h1>Daitec</h1>
-    <p>Entrez l'adresse de votre serveur Daitec — votre déploiement cloud
-       (ex. <b>https://daitec.vercel.app</b>) ou un serveur local
+    <p>Adresse de votre serveur Daitec — déploiement cloud
+       (ex. <b>https://daitec.vercel.app</b>) ou serveur local
        (ex. <b>http://192.168.1.10:3000</b>).</p>
     <label for="url">Adresse du serveur</label>
     <input id="url" type="url" placeholder="https://daitec.vercel.app" autofocus />
+
+    <div class="kiosk">
+      <label class="kiosk-head" style="margin:0">
+        <input id="kiosk" type="checkbox" />
+        <span>Mode kiosque (poste caissier)</span>
+      </label>
+      <small>Plein écran verrouillé, ouvre directement la <b>Caisse (POS)</b>.
+        Sortie uniquement par PIN (<b>Ctrl+Alt+Q</b>).</small>
+      <div id="pinRow">
+        <label for="pin">PIN de sortie (4 à 8 chiffres)</label>
+        <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••" />
+        <small id="pinHint"></small>
+      </div>
+    </div>
+
     <div class="err" id="err"></div>
-    <button id="go">Se connecter</button>
-    <div class="hint">Astuce : Ctrl+Shift+S rouvre cet écran à tout moment.</div>
+    <button id="go">Enregistrer & lancer</button>
+    <div class="hint">Ctrl+Shift+S rouvre cet écran (PIN requis en mode kiosque).</div>
   </div>
   <script>
-    const input = document.getElementById("url");
+    const url = document.getElementById("url");
+    const kiosk = document.getElementById("kiosk");
+    const pinRow = document.getElementById("pinRow");
+    const pin = document.getElementById("pin");
+    const pinHint = document.getElementById("pinHint");
     const err = document.getElementById("err");
-    window.daitecDesktop.getServerUrl().then((u) => { if (u) input.value = u; });
+    let hasPin = false;
+
+    window.daitecDesktop.getConfig().then((c) => {
+      if (c.serverUrl) url.value = c.serverUrl;
+      kiosk.checked = c.kioskMode;
+      hasPin = c.hasPin;
+      sync();
+    });
+    function sync() {
+      pinRow.style.display = kiosk.checked ? "block" : "none";
+      pinHint.textContent = hasPin ? "Laissez vide pour conserver le PIN actuel." : "";
+    }
+    kiosk.addEventListener("change", sync);
+
     async function go() {
       err.textContent = "";
-      const r = await window.daitecDesktop.setServerUrl(input.value.trim());
+      const r = await window.daitecDesktop.save({
+        serverUrl: url.value.trim(),
+        kioskMode: kiosk.checked,
+        pin: pin.value.trim(),
+      });
       if (!r.ok) err.textContent = r.error;
     }
     document.getElementById("go").addEventListener("click", go);
-    input.addEventListener("keydown", (e) => e.key === "Enter" && go());
+    document.addEventListener("keydown", (e) => e.key === "Enter" && go());
   </script>
 </body>
 </html>

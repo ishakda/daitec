@@ -26,7 +26,8 @@
       "setup.html",
       "icon.png",
       "icon.ico",
-      "genicon.js"
+      "genicon.js",
+      "pin.html"
     ],
     "win": {
       "target": [

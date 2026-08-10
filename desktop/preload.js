@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("daitecDesktop", {
-  getServerUrl: () => ipcRenderer.invoke("daitec:getServerUrl"),
-  setServerUrl: (url) => ipcRenderer.invoke("daitec:setServerUrl", url),
+  getConfig: () => ipcRenderer.invoke("daitec:getConfig"),
+  save: (payload) => ipcRenderer.invoke("daitec:save", payload),
+  exitKiosk: (pin) => ipcRenderer.invoke("daitec:exitKiosk", pin),
 });

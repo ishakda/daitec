@@ -31,6 +31,15 @@ Les autres postes du magasin se connectent à `http://192.168.x.x:3000`.
    accède à la caméra (scan QR) et au GPS (livreur). `Ctrl+Shift+S` pour
    changer de serveur.
 
+### Mode kiosque (poste caissier) 🔒
+Dans l'écran de configuration du .exe, cochez **« Mode kiosque (poste caissier) »**
+et définissez un **PIN (4 à 8 chiffres)** :
+- l'application démarre en **plein écran verrouillé** directement sur la **Caisse (POS)** ;
+- impossible de fermer, réduire ou quitter sans le PIN ;
+- **Ctrl+Alt+Q** (ou Ctrl+Shift+S) affiche l'écran de déverrouillage — PIN requis ;
+- le caissier se connecte avec son compte « Caissier », qui ne voit de toute façon
+  ni les coûts ni les autres modules (RBAC côté serveur).
+
 > Le .exe est une coquille de bureau : les données restent sur votre serveur.
 > Pour générer l'installateur signé (Setup.exe), poussez un tag `v*` sur GitHub —
 > le workflow `.github/workflows/desktop.yml` le construit automatiquement

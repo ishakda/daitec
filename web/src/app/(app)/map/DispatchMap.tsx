@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/I18nProvider";
 import { useApi } from "@/lib/client";
-import { Badge } from "@/components/ui";
-import { BaseMap, FitBounds, Marker, Popup, pin, dot, COLORS } from "@/components/MapKit";
+import { Badge, Select } from "@/components/ui";
+import { BaseMap, FitBounds, HeatLayer, Marker, Popup, pin, dot, COLORS } from "@/components/MapKit";
 
 type MapData = {
   branches: Array<{ id: string; name: string; address: string | null; latitude: string; longitude: string }>;
@@ -15,6 +15,8 @@ type MapData = {
 type Couriers = {
   data: Array<{ courier_id: string; courier_name: string; latitude: string; longitude: string; recorded_at: string; active_deliveries: number }>;
 };
+type RevenuePoint = { id: string; name: string; latitude: number; longitude: number; revenue: number; orders: number };
+type RevenueData = { days: number; points: RevenuePoint[]; maxRevenue: number; totalRevenue: number };
 
 export default function DispatchMap() {
   const { t, formatMoney, formatDateTime } = useI18n();
@@ -22,9 +24,23 @@ export default function DispatchMap() {
   const [showCustomers, setShowCustomers] = useState(true);
   const [debtOnly, setDebtOnly] = useState(false);
   const [showDeliveries, setShowDeliveries] = useState(true);
+  const [showHeat, setShowHeat] = useState(false);
+  const [heatDays, setHeatDays] = useState(90);
 
   const { data } = useApi<MapData>(`/map?withDebt=${debtOnly}`);
   const { data: couriers } = useApi<Couriers>("/courier/positions", { refreshInterval: 10000 });
+  const { data: revenue } = useApi<RevenueData>(showHeat ? `/map/revenue?days=${heatDays}` : null);
+
+  // Normalise revenue to 0..1 with a sqrt scale so a few big accounts don't
+  // wash out everyone else; guarantee a visible floor for any paying customer.
+  const heatPoints = useMemo<Array<[number, number, number]>>(() => {
+    const max = revenue?.maxRevenue ?? 0;
+    if (!showHeat || !revenue || max <= 0) return [];
+    return revenue.points.map((p) => [
+      p.latitude, p.longitude,
+      Math.max(0.15, Math.sqrt(p.revenue / max)),
+    ]);
+  }, [showHeat, revenue]);
 
   const num = (v: string | null) => (v == null ? null : Number(v));
   const points: Array<[number, number]> = [
@@ -52,17 +68,51 @@ export default function DispatchMap() {
           <input type="checkbox" checked={showDeliveries} onChange={(e) => setShowDeliveries(e.target.checked)} />
           {t("map.deliveries")}
         </label>
+        <label className="flex items-center gap-1.5 text-[13px] font-medium text-ink-2">
+          <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} />
+          {t("map.revenueHeat")}
+        </label>
+        {showHeat && (
+          <Select value={String(heatDays)} onChange={(e) => setHeatDays(Number(e.target.value))}
+            className="!h-8 max-w-[150px] text-[13px]">
+            <option value="30">{t("map.period30")}</option>
+            <option value="90">{t("map.period90")}</option>
+            <option value="180">{t("map.period180")}</option>
+            <option value="365">{t("map.period365")}</option>
+          </Select>
+        )}
         <div className="ms-auto flex flex-wrap items-center gap-2 text-[12px] text-ink-2">
-          <LegendDot color={COLORS.store} label={t("map.stores")} />
-          <LegendDot color={COLORS.customer} label={t("map.clients")} />
-          <LegendDot color={COLORS.courier} label={t("map.couriers")} />
-          <LegendDot color={COLORS.out_for_delivery} label={t("map.deliveries")} />
+          {showHeat ? (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-24 rounded-full"
+                style={{ background: "linear-gradient(90deg,#2c7fb8,#41b6c4,#fed976,#fd8d3c,#e31a1c)" }} />
+              <span>{t("map.heatLow")}</span>
+              <span className="text-ink-3">→</span>
+              <span>{t("map.heatHigh")}</span>
+            </span>
+          ) : (
+            <>
+              <LegendDot color={COLORS.store} label={t("map.stores")} />
+              <LegendDot color={COLORS.customer} label={t("map.clients")} />
+              <LegendDot color={COLORS.courier} label={t("map.couriers")} />
+              <LegendDot color={COLORS.out_for_delivery} label={t("map.deliveries")} />
+            </>
+          )}
         </div>
       </div>
+      {showHeat && revenue && (
+        <p className="text-[12.5px] text-ink-3">
+          {t("map.heatSummary", {
+            total: formatMoney(revenue.totalRevenue),
+            n: revenue.points.length,
+          })}
+        </p>
+      )}
 
       <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-line shadow-card" dir="ltr">
         <BaseMap>
           <FitBounds points={points} />
+          {showHeat && <HeatLayer points={heatPoints} />}
           {data?.branches.map((b) => (
             <Marker key={b.id} position={[Number(b.latitude), Number(b.longitude)]} icon={pin(COLORS.store, "M")}>
               <Popup><strong>{b.name}</strong><br />{b.address}</Popup>

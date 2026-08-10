@@ -465,7 +465,15 @@
     "activeDeliveries": "livraison(s) en cours",
     "position": "Position",
     "searchAddress": "Rechercher une adresse…",
-    "setPosition": "Définir la position"
+    "setPosition": "Définir la position",
+    "revenueHeat": "Carte de chaleur (CA)",
+    "period30": "30 derniers jours",
+    "period90": "90 derniers jours",
+    "period180": "6 derniers mois",
+    "period365": "12 derniers mois",
+    "heatLow": "Faible",
+    "heatHigh": "Élevé",
+    "heatSummary": "{total} de chiffre d’affaires réparti sur {n} client(s) géolocalisé(s)."
   },
   "qr": {
     "title": "Code QR client",

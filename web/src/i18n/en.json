@@ -465,7 +465,15 @@
     "activeDeliveries": "active deliveries",
     "position": "Position",
     "searchAddress": "Search an address…",
-    "setPosition": "Set position"
+    "setPosition": "Set position",
+    "revenueHeat": "Revenue heatmap",
+    "period30": "Last 30 days",
+    "period90": "Last 90 days",
+    "period180": "Last 6 months",
+    "period365": "Last 12 months",
+    "heatLow": "Low",
+    "heatHigh": "High",
+    "heatSummary": "{total} in revenue across {n} geolocated customer(s)."
   },
   "qr": {
     "title": "Customer QR code",

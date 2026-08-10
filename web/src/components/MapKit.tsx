@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.heat";
 
 export const ALGIERS: [number, number] = [36.7538, 3.0588];
 
@@ -102,6 +103,68 @@ export function FitBounds({ points }: { points: Array<[number, number]> }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, map]);
+  return null;
+}
+
+type HeatPoint = [number, number, number]; // lat, lng, intensity 0..1
+
+interface HeatLayerLike extends L.Layer {
+  setLatLngs(latlngs: HeatPoint[]): HeatLayerLike;
+  setOptions(opts: Record<string, unknown>): HeatLayerLike;
+}
+// leaflet.heat augments L at runtime; declare the factory we use.
+const heatFactory = (L as unknown as {
+  heatLayer: (points: HeatPoint[], opts?: Record<string, unknown>) => HeatLayerLike;
+}).heatLayer;
+
+/**
+ * Revenue heatmap. `points` are [lat, lng, weight] with weight already
+ * normalised to 0..1. The canvas layer is created once and updated in place
+ * so polling/toggles never rebuild it, and it is guarded + removed cleanly on
+ * unmount (same _leaflet_pos safety as the rest of the kit).
+ */
+export function HeatLayer({
+  points, radius = 34, blur = 24, maxZoom = 16,
+}: {
+  points: HeatPoint[]; radius?: number; blur?: number; maxZoom?: number;
+}) {
+  const map = useMap();
+  const layerRef = useRef<HeatLayerLike | null>(null);
+
+  useEffect(() => {
+    if (!mapAlive(map) || typeof heatFactory !== "function") return;
+    if (!layerRef.current) {
+      layerRef.current = heatFactory([], {
+        radius, blur, maxZoom, minOpacity: 0.25,
+        gradient: { 0.2: "#2c7fb8", 0.45: "#41b6c4", 0.65: "#fed976", 0.85: "#fd8d3c", 1.0: "#e31a1c" },
+      });
+      try { layerRef.current.addTo(map); } catch { /* torn down */ }
+    }
+    try { layerRef.current?.setLatLngs(points); } catch { /* ignore */ }
+    return () => {
+      const layer = layerRef.current;
+      layerRef.current = null;
+      if (!layer) return;
+      // leaflet.heat schedules a redraw via requestAnimationFrame; removeLayer
+      // nulls its _map, so a pending frame would call null.getSize(). Cancel it.
+      const pending = (layer as unknown as { _frame?: number })._frame;
+      if (pending) {
+        try { window.cancelAnimationFrame(pending); } catch { /* ignore */ }
+        (layer as unknown as { _frame: number | null })._frame = null;
+      }
+      if (mapAlive(map)) { try { map.removeLayer(layer); } catch { /* ignore */ } }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+
+  // Update points without recreating the layer.
+  useEffect(() => {
+    if (layerRef.current && mapAlive(map)) {
+      try { layerRef.current.setLatLngs(points); } catch { /* ignore */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points]);
+
   return null;
 }
 

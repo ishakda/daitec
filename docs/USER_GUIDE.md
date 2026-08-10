@@ -100,6 +100,12 @@ thermique installée comme imprimante système (Epson, Xprinter, etc.).
 - **Carte** : magasins, dépôts, clients (orange = avec créance), livraisons en
   cours par couleur de statut, et position des livreurs actualisée toutes les
   10 secondes.
+- **Carte de chaleur du chiffre d'affaires** : cochez « Carte de chaleur (CA) »
+  pour voir d'où vient votre chiffre d'affaires — les zones passent du bleu
+  (faible) au rouge (élevé) selon le CA cumulé par client géolocalisé. Choisissez
+  la période (30 jours à 12 mois). Idéal pour repérer vos secteurs les plus
+  rentables et cibler tournées et prospection. (Les ventes de comptoir sans
+  client identifié n'ont pas de position et ne sont pas comptées ici.)
 
 ## Administration
 

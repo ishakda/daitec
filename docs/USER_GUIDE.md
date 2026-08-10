@@ -23,6 +23,13 @@
 5. **Mettre en attente / reprendre** des ventes ; **clôturer la caisse** en fin
    de journée : Daitec calcule les espèces attendues et l'écart.
 
+**Mode hors ligne** : si Internet coupe, la caisse continue — recherche et
+scan fonctionnent sur le catalogue local, les ventes s'enregistrent en tickets
+locaux (« HL-001 ») et se synchronisent **automatiquement** au retour de la
+connexion (badge « à synchroniser » dans l'en-tête). Aucune vente n'est perdue
+ni comptée deux fois ; une vente refusée à la synchronisation (stock devenu
+insuffisant) apparaît dans « Ventes en conflit » pour vérification.
+
 ### Ventes & documents
 - **Ventes → Nouvelle vente** : facture ou proforma, remise globale, échéance,
   acompte. Impression **A4** via le bouton Imprimer (PDF via la boîte de dialogue).

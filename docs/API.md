@@ -77,6 +77,13 @@ Common codes: `UNAUTHORIZED` 401 · `FORBIDDEN` 403 (missing permission) ·
 | POST | `/registers/:id/close` | `{actualCash}` → expected (opening + cash in − cash out − cash expenses ± manual movements), difference |
 | GET/POST | `/registers/:id/movements` | manual cash in/out |
 
+## Offline POS sync
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/pos/catalog` | offline catalog snapshot: active products + barcodes + stock (`pos.use`) |
+| POST | `/pos/sync` | `{deviceId, idempotencyKey, operation: "create_sale", payload}` — exactly-once replay via sync_queue; replays return the stored result (`duplicate: true`); business failures → 409 `SYNC_CONFLICT` |
+| POST | `/pos/sync/conflict` | records a client-detected sync conflict for review |
+
 ## Deliveries & tracking
 | Method | Path | Notes |
 |---|---|---|

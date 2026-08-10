@@ -136,12 +136,27 @@ enforced in `withApi` — members get 403 `COMPANY_SUSPENDED`, no data is
 touched), and an append-only `platform_audit_logs` trail (immutable even
 for the DB superuser).
 
-## Offline POS & sync (Phase 2 groundwork)
+## Offline POS & sync (implemented)
 
-`sync_queue` (device_id + idempotency_key unique, status machine
-pending→applied/conflict) is in place. The POS already keeps held sales in
-localStorage; the Phase 2 offline engine will queue completed sales locally
-(UUIDs + idempotency keys) and replay them through the same domain services.
+The POS keeps selling with no connection:
+
+- **Catalog cache** — `/pos/catalog` snapshots every active product (prices,
+  tax, barcodes, stock) into IndexedDB; offline search/scan hit the cache.
+- **Sale queue** — when the network drops, completed sales are stored in
+  IndexedDB with a client `idempotencyKey` (UUID) + persistent `deviceId`,
+  shown as local tickets (`HL-001`…). Never lost: an item leaves the queue
+  only when the server confirms.
+- **Sync drain** — on the `online` event (and every 30 s) the queue replays
+  FIFO through `/pos/sync`, which runs the normal `createSale` domain service
+  (stock ledger, payments, COD…) inside one transaction and records the
+  outcome in `sync_queue` keyed by `(company, device, idempotency_key)`.
+  A replay returns the stored result — **exactly-once semantics**.
+- **Conflicts** — business rules re-validate at sync time; an offline
+  oversell returns `409 SYNC_CONFLICT`, the item moves to a local conflicts
+  list (reviewable in the POS, discardable) and is recorded server-side via
+  `/pos/sync/conflict` for the manager.
+- UI: online/offline pill, pending-sync badge (tap to force a drain),
+  conflicts badge + review modal.
 
 ## Supabase migration path
 

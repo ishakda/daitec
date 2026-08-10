@@ -488,5 +488,18 @@
     "overdue_customer": "Facture client en retard — {label}",
     "supplier_due": "Facture fournisseur à payer — {label}",
     "delivery_failed": "Échec de livraison — {label}"
+  },
+  "offline": {
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "pending": "{n} vente(s) à synchroniser",
+    "synced": "{n} vente(s) synchronisée(s) ✓",
+    "conflicts": "{n} vente(s) en conflit",
+    "localTicket": "Ticket local (hors ligne)",
+    "queuedInfo": "Vente enregistrée localement — elle sera synchronisée automatiquement au retour de la connexion.",
+    "conflictsTitle": "Ventes en conflit",
+    "conflictHint": "Ces ventes hors ligne ont été refusées à la synchronisation (ex. stock insuffisant). Vérifiez le stock puis ressaisissez-les si nécessaire.",
+    "discard": "Abandonner",
+    "catalogReady": "Catalogue hors ligne prêt ({n} produits)"
   }
 }

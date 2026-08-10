@@ -488,5 +488,18 @@
     "overdue_customer": "Overdue customer invoice — {label}",
     "supplier_due": "Supplier invoice due — {label}",
     "delivery_failed": "Delivery failed — {label}"
+  },
+  "offline": {
+    "online": "Online",
+    "offline": "Offline",
+    "pending": "{n} sale(s) to sync",
+    "synced": "{n} sale(s) synced ✓",
+    "conflicts": "{n} conflicting sale(s)",
+    "localTicket": "Local ticket (offline)",
+    "queuedInfo": "Sale saved locally — it will sync automatically when the connection returns.",
+    "conflictsTitle": "Conflicting sales",
+    "conflictHint": "These offline sales were rejected at sync time (e.g. insufficient stock). Check stock and re-enter them if needed.",
+    "discard": "Discard",
+    "catalogReady": "Offline catalog ready ({n} products)"
   }
 }

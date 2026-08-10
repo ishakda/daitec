@@ -1,10 +1,14 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Trash2, Pause, Play, Banknote, X, Printer } from "lucide-react";
+import { ArrowLeft, Trash2, Pause, Play, Banknote, X, Printer, Wifi, WifiOff, CloudUpload, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/components/I18nProvider";
 import { useApi, apiFetch, ClientApiError } from "@/lib/client";
 import { Button, Input, Field, Modal, Badge, Spinner } from "@/components/ui";
+import {
+  cacheCatalog, offlineLookup, catalogCount, enqueueSale, pendingSales,
+  conflictSales, discardConflict, drainQueue, CatalogItem, ConflictItem,
+} from "@/lib/offline";
 
 type LookupItem = { id: string; sku: string; name: string; price: string; tax_rate: string; variant_id: string | null; variant_name: string | null; stock: string };
 type CartLine = { productId: string; variantId: string | null; name: string; unitPrice: number; taxRate: number; quantity: number; discountPct: number; stock: number };
@@ -35,6 +39,47 @@ export default function PosPage() {
 
   const warehouse = warehouses?.data.find((w) => w.is_default) ?? warehouses?.data[0];
   const session = reg?.current ?? null;
+
+  /* ---------------- offline engine ---------------- */
+  const [online, setOnline] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
+  const [conflictsOpen, setConflictsOpen] = useState(false);
+
+  const refreshOfflineState = useCallback(async () => {
+    setPendingCount((await pendingSales()).length);
+    setConflicts(await conflictSales());
+  }, []);
+
+  const runDrain = useCallback(async () => {
+    if (!navigator.onLine) return;
+    const r = await drainQueue();
+    if (r.applied > 0) flash(t("offline.synced", { n: r.applied }));
+    refreshOfflineState();
+  }, [refreshOfflineState, t]);
+
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const up = () => { setOnline(true); runDrain(); };
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    refreshOfflineState();
+    // cache the catalog for offline search (refresh when online)
+    (async () => {
+      try {
+        const r = await apiFetch<{ data: CatalogItem[] }>("/pos/catalog");
+        await cacheCatalog(r.data);
+      } catch { /* offline start: keep the existing cache */ }
+    })();
+    const iv = setInterval(runDrain, 30000);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+      clearInterval(iv);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     try { setHeld(JSON.parse(localStorage.getItem(HELD_KEY) ?? "[]")); } catch { /* ignore */ }
@@ -70,10 +115,18 @@ export default function PosPage() {
     if (!q.trim() || !warehouse) { setResults([]); return; }
     timer.current = setTimeout(async () => {
       try {
+        if (!navigator.onLine) throw new Error("offline");
         const r = await apiFetch<{ data: LookupItem[]; matched: string }>(
           `/products/lookup?q=${encodeURIComponent(q.trim())}&warehouseId=${warehouse.id}`);
         setResults(r.data);
-      } catch { setResults([]); }
+      } catch {
+        // offline: search the cached catalog
+        const hits = await offlineLookup(q.trim());
+        setResults(hits.map((h) => ({
+          id: h.id, sku: h.sku, name: h.name, price: h.selling_price,
+          tax_rate: h.tax_rate, variant_id: null, variant_name: null, stock: h.stock,
+        })));
+      }
     }, 160);
   }, [q, warehouse]);
 
@@ -81,10 +134,18 @@ export default function PosPage() {
     if (e.key !== "Enter" || !q.trim() || !warehouse) return;
     e.preventDefault();
     try {
+      if (!navigator.onLine) throw new Error("offline");
       const r = await apiFetch<{ data: LookupItem[] }>(
         `/products/lookup?barcode=${encodeURIComponent(q.trim())}&warehouseId=${warehouse.id}`);
       if (r.data.length) { addItem(r.data[0]); return; }
-    } catch { /* fall through */ }
+    } catch {
+      const hits = await offlineLookup(q.trim(), 1);
+      if (hits.length) {
+        addItem({ id: hits[0].id, sku: hits[0].sku, name: hits[0].name, price: hits[0].selling_price,
+          tax_rate: hits[0].tax_rate, variant_id: null, variant_name: null, stock: hits[0].stock });
+        return;
+      }
+    }
     if (results.length) addItem(results[0]);
   }
 
@@ -126,18 +187,37 @@ export default function PosPage() {
         ) : (
           <Badge tone="warn">{t("pos.noSession")}</Badge>
         )}
+        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold
+          ${online ? "bg-emerald-400/15 text-emerald-300" : "bg-red-400/20 text-red-300"}`}>
+          {online ? <Wifi size={13} /> : <WifiOff size={13} />}
+          {online ? t("offline.online") : t("offline.offline")}
+        </span>
+        {pendingCount > 0 && (
+          <button onClick={runDrain}
+            className="flex items-center gap-1.5 rounded-full bg-amber-400/15 px-2.5 py-1 text-[12px] font-semibold text-amber-300 hover:bg-amber-400/25">
+            <CloudUpload size={13} /> {t("offline.pending", { n: pendingCount })}
+          </button>
+        )}
+        {conflicts.length > 0 && (
+          <button onClick={() => setConflictsOpen(true)}
+            className="flex items-center gap-1.5 rounded-full bg-red-400/15 px-2.5 py-1 text-[12px] font-semibold text-red-300 hover:bg-red-400/25">
+            <AlertTriangle size={13} /> {t("offline.conflicts", { n: conflicts.length })}
+          </button>
+        )}
         <div className="ms-auto flex items-center gap-2">
           {lastTicket && (
             <span className="flex items-center gap-2 text-[12.5px] text-white/70">
               {t("pos.lastTicket")}: <span className="num font-medium text-white">{lastTicket.number}</span>
               {lastTicket.change > 0 && <> · {t("pos.change")}: <span className="num font-semibold text-emerald-300">{formatMoney(lastTicket.change)}</span></>}
-              <button
-                onClick={() => window.open(`/pos/receipt/${lastTicket.saleId}?dup=1`, "_blank", "width=420,height=640")}
-                title={t("pos.printReceipt")}
-                className="rounded-md p-1.5 text-white/80 hover:bg-white/15 hover:text-white"
-              >
-                <Printer size={15} />
-              </button>
+              {lastTicket.saleId && (
+                <button
+                  onClick={() => window.open(`/pos/receipt/${lastTicket.saleId}?dup=1`, "_blank", "width=420,height=640")}
+                  title={t("pos.printReceipt")}
+                  className="rounded-md p-1.5 text-white/80 hover:bg-white/15 hover:text-white"
+                >
+                  <Printer size={15} />
+                </button>
+              )}
             </span>
           )}
           {session && <CloseRegisterButton sessionId={session.id} onClosed={() => mutateReg()} />}
@@ -264,6 +344,30 @@ export default function PosPage() {
         </div>
       )}
 
+      {conflictsOpen && (
+        <Modal open onClose={() => setConflictsOpen(false)} title={t("offline.conflictsTitle")} wide>
+          <p className="mb-3 rounded-lg bg-warn-soft px-3 py-2 text-[13px] text-warn">{t("offline.conflictHint")}</p>
+          <table className="w-full text-sm">
+            <tbody>
+              {conflicts.map((c) => (
+                <tr key={c.idempotencyKey} className="border-b border-line last:border-0">
+                  <td className="num px-2 py-2 font-medium">{c.localNumber}</td>
+                  <td className="px-2 py-2 text-xs text-ink-3">{new Date(c.queuedAt).toLocaleString()}</td>
+                  <td className="num px-2 py-2 text-end font-medium">{formatMoney(c.total)}</td>
+                  <td className="px-2 py-2 text-xs text-danger">{c.error}</td>
+                  <td className="px-2 py-2 text-end">
+                    <Button variant="ghost" className="h-7 px-2 text-xs text-danger"
+                      onClick={async () => { await discardConflict(c.idempotencyKey); refreshOfflineState(); }}>
+                      {t("offline.discard")}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Modal>
+      )}
+
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-navy px-4 py-2.5 text-[13.5px] font-medium text-white shadow-pop">
           {toast}
@@ -277,22 +381,37 @@ export default function PosPage() {
           customer={customer}
           onClose={() => setPayOpen(false)}
           onConfirm={async (payments, change) => {
-            const r = await apiFetch<{ saleId: string; number: string; totals: { total: number } }>("/sales", {
-              method: "POST",
-              json: {
-                saleType: "pos", customerId: customer?.id ?? null, warehouseId: warehouse.id,
-                registerSessionId: session.id,
-                items: cart.map((l) => ({
-                  productId: l.productId, variantId: l.variantId, quantity: l.quantity,
-                  unitPrice: l.unitPrice, discountPct: l.discountPct, taxRate: l.taxRate,
-                })),
-                payments,
-              },
-            });
-            setLastTicket({ saleId: r.saleId, number: r.number, total: r.totals.total, change });
-            setCart([]); setCustomer(null); setPayOpen(false);
-            if (receiptSettings?.value.autoPrint) {
-              window.open(`/pos/receipt/${r.saleId}`, "_blank", "width=420,height=640");
+            const salePayload = {
+              saleType: "pos", customerId: customer?.id ?? null, warehouseId: warehouse.id,
+              registerSessionId: session.id,
+              items: cart.map((l) => ({
+                productId: l.productId, variantId: l.variantId, quantity: l.quantity,
+                unitPrice: l.unitPrice, discountPct: l.discountPct, taxRate: l.taxRate,
+              })),
+              payments,
+            };
+            try {
+              if (!navigator.onLine) throw new TypeError("offline");
+              const r = await apiFetch<{ saleId: string; number: string; totals: { total: number } }>("/sales", {
+                method: "POST", json: salePayload,
+              });
+              setLastTicket({ saleId: r.saleId, number: r.number, total: r.totals.total, change });
+              setCart([]); setCustomer(null); setPayOpen(false);
+              if (receiptSettings?.value.autoPrint) {
+                window.open(`/pos/receipt/${r.saleId}`, "_blank", "width=420,height=640");
+              }
+            } catch (e) {
+              // Network failure → queue the sale locally (idempotent replay later).
+              if (e instanceof TypeError) {
+                const queued = await enqueueSale(salePayload, totals.total);
+                setOnline(false);
+                setLastTicket({ saleId: "", number: queued.localNumber, total: queued.total, change });
+                setCart([]); setCustomer(null); setPayOpen(false);
+                flash(t("offline.queuedInfo"));
+                refreshOfflineState();
+              } else {
+                throw e; // business errors still surface in the modal
+              }
             }
             searchRef.current?.focus();
           }}

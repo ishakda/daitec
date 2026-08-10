@@ -95,6 +95,7 @@ export function PartnerModal({ kind, open, onClose, onDone, initial, partnerId }
   const empty = { name: "", companyName: "", phone: "", email: "", address: "", city: "", wilaya: "", nif: "", nis: "", rc: "", ai: "", creditLimit: "", paymentTermsDays: "" };
   const [form, setForm] = useState<Record<string, string>>(empty);
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [posOpen, setPosOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -111,11 +112,9 @@ export function PartnerModal({ kind, open, onClose, onDone, initial, partnerId }
             paymentTermsDays: initial.payment_terms_days != null ? String(initial.payment_terms_days) : "",
           }
         : empty);
-      setPos(
-        initial && initial.latitude != null && initial.longitude != null
-          ? { lat: Number(initial.latitude), lng: Number(initial.longitude) }
-          : null
-      );
+      const hasPos = !!(initial && initial.latitude != null && initial.longitude != null);
+      setPos(hasPos ? { lat: Number(initial!.latitude), lng: Number(initial!.longitude) } : null);
+      setPosOpen(hasPos);
       setErr(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,11 +172,16 @@ export function PartnerModal({ kind, open, onClose, onDone, initial, partnerId }
           </Field>
         </div>
         {kind === "customers" && (
-          <details className="rounded-lg border border-line p-3" open={!!pos}>
+          <details className="rounded-lg border border-line p-3" open={posOpen}
+            onToggle={(e) => setPosOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="cursor-pointer text-[13px] font-medium text-ink-2">{t("map.position")}</summary>
-            <div className="mt-3">
-              <LocationPicker value={pos} onChange={setPos} searchPlaceholder={t("map.searchAddress")} />
-            </div>
+            {/* Mount the map only while expanded so Leaflet never initialises
+                inside a hidden 0×0 container (source of _leaflet_pos crashes). */}
+            {posOpen && (
+              <div className="mt-3">
+                <LocationPicker value={pos} onChange={setPos} searchPlaceholder={t("map.searchAddress")} />
+              </div>
+            )}
           </details>
         )}
         <details className="rounded-lg border border-line p-3">

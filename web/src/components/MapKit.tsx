@@ -44,6 +44,40 @@ export const COLORS = {
   out_for_delivery: "#7a5af8", delivered: "#067647", failed: "#b42318",
 };
 
+/**
+ * Keeps Leaflet's internal size in sync with the container. A map mounted
+ * inside a hidden/zero-size element (e.g. a collapsed <details> or an
+ * animating modal) initialises with a 0×0 size; without this, the first
+ * interaction computes positions against stale geometry and throws
+ * "reading '_leaflet_pos'". We invalidate on every size change and once the
+ * element gains real dimensions.
+ */
+function AutoResize() {
+  const map = useMap();
+  useEffect(() => {
+    let raf = 0;
+    const invalidate = () => {
+      if (!mapAlive(map)) return;
+      raf = window.requestAnimationFrame(() => {
+        if (mapAlive(map)) { try { map.invalidateSize({ animate: false }); } catch { /* ignore */ } }
+      });
+    };
+    const el = (() => { try { return map.getContainer(); } catch { return null; } })();
+    let ro: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(invalidate);
+      ro.observe(el);
+    }
+    invalidate(); // correct an initial hidden/0×0 mount
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      if (ro) ro.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+  return null;
+}
+
 export function BaseMap({
   center = ALGIERS, zoom = 12, children, className = "h-full w-full",
 }: {
@@ -57,6 +91,7 @@ export function BaseMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <AutoResize />
       {children}
     </MapContainer>
   );

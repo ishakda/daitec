@@ -501,5 +501,22 @@
     "conflictHint": "These offline sales were rejected at sync time (e.g. insufficient stock). Check stock and re-enter them if needed.",
     "discard": "Discard",
     "catalogReady": "Offline catalog ready ({n} products)"
+  },
+  "livreur": {
+    "manage": "Couriers",
+    "add": "Add a courier",
+    "list": "My couriers",
+    "name": "Courier name",
+    "phoneOpt": "Phone (optional)",
+    "genPassword": "Generate",
+    "created": "Courier added ✓",
+    "credsTitle": "Credentials to hand to the courier",
+    "credsHint": "The courier logs in with these credentials on their phone, then opens “Courier space”.",
+    "loginAddr": "Login address",
+    "copy": "Copy",
+    "copied": "Copied ✓",
+    "printCard": "Print card",
+    "activeCount": "{n} active deliveries",
+    "none": "No couriers yet — add the first one in 10 seconds."
   }
 }

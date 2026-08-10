@@ -9,6 +9,7 @@ import { useApi, apiFetch, useMe, ClientApiError } from "@/lib/client";
 import { Button, Card, Badge, Select, Input, Field, Modal, EmptyState, TableSkeleton } from "@/components/ui";
 import { DataTable, Pagination, Column } from "@/components/DataTable";
 import { ProofViewer } from "@/components/ProofOfDelivery";
+import { CourierManagerButton } from "@/components/CourierManager";
 
 const LocationPicker = dynamic(
   () => import("@/components/MapKit").then((m) => m.LocationPicker),
@@ -98,6 +99,7 @@ function DeliveriesInner() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-semibold">{t("delivery.title")}</h1>
         <div className="flex gap-2">
+          {can("users.manage") && <CourierManagerButton />}
           <Link href="/map"><Button variant="secondary"><MapPin size={15} /> {t("map.title")}</Button></Link>
           {can("deliveries.create") && (
             <Button onClick={() => setShowNew(true)}><Plus size={15} /> {t("delivery.new")}</Button>

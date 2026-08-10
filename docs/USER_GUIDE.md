@@ -79,6 +79,11 @@ thermique installée comme imprimante système (Epson, Xprinter, etc.).
   ou cliquez sur la carte pour poser l'épingle.
 - **Créer une livraison** depuis une facture (le COD = reste à payer, ajustable)
   ou depuis **Livraisons → Nouvelle livraison** ; affectez un **livreur**.
+- **Ajouter un livreur en 10 secondes** : **Livraisons → Livreurs → Ajouter un
+  livreur** — tapez juste son nom, l'e-mail et le mot de passe sont générés
+  automatiquement, et Daitec vous affiche une **fiche d'identifiants** à copier
+  ou imprimer et remettre au livreur. Il apparaît immédiatement dans les listes
+  d'affectation.
 - **Espace livreur** (sur téléphone) : liste de ses livraisons, boutons
   Appeler / Itinéraire, statuts en un geste (Récupéré → En route → Livrée),
   et bouton **En service** qui active le suivi GPS. À la livraison, le COD est

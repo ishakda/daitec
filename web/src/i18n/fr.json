@@ -501,5 +501,22 @@
     "conflictHint": "Ces ventes hors ligne ont été refusées à la synchronisation (ex. stock insuffisant). Vérifiez le stock puis ressaisissez-les si nécessaire.",
     "discard": "Abandonner",
     "catalogReady": "Catalogue hors ligne prêt ({n} produits)"
+  },
+  "livreur": {
+    "manage": "Livreurs",
+    "add": "Ajouter un livreur",
+    "list": "Mes livreurs",
+    "name": "Nom du livreur",
+    "phoneOpt": "Téléphone (optionnel)",
+    "genPassword": "Générer",
+    "created": "Livreur ajouté ✓",
+    "credsTitle": "Identifiants à remettre au livreur",
+    "credsHint": "Le livreur se connecte avec ces identifiants sur son téléphone, puis ouvre « Espace livreur ».",
+    "loginAddr": "Adresse de connexion",
+    "copy": "Copier",
+    "copied": "Copié ✓",
+    "printCard": "Imprimer la fiche",
+    "activeCount": "{n} livraison(s) en cours",
+    "none": "Aucun livreur pour l'instant — ajoutez le premier en 10 secondes."
   }
 }

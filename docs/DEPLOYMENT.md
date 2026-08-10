@@ -43,6 +43,13 @@
    `request.jwt.claim.sub` per transaction — Supabase's native `auth.uid()`
    reads it first, so tenant RLS works unchanged).
 
+   **No CLI / no local `psql`?** Open the Supabase **SQL Editor**, paste the
+   whole of [`supabase/deploy_all.sql`](../supabase/deploy_all.sql) (all 14
+   migrations bundled + the role bootstrap), replace the single
+   `REPLACE_WITH_STRONG_APP_PASSWORD` placeholder at the top with your app
+   password, and **Run** once. Do **not** run `local_bootstrap.sql` on Supabase
+   (it provides `auth.uid()` natively).
+
 2. **Vercel**: import the repo, set **Root Directory = `web`**, add env vars:
    | Var | Value |
    |---|---|

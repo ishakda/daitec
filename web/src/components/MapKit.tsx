@@ -3,7 +3,7 @@
  * Leaflet map kit (OpenStreetMap tiles — no API key).
  * Client-only: pages must import via next/dynamic with ssr: false.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -50,6 +50,7 @@ export function BaseMap({
 }) {
   return (
     <MapContainer center={center} zoom={zoom} className={className} scrollWheelZoom
+      zoomAnimation={false} fadeAnimation={false} markerZoomAnimation={false}
       attributionControl>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -60,14 +61,45 @@ export function BaseMap({
   );
 }
 
-/** Fit map to a set of points once they load. */
+/** True while the Leaflet map is alive and attached to the DOM. */
+function mapAlive(map: L.Map): boolean {
+  try {
+    const el = map.getContainer();
+    // @ts-expect-error _leaflet_id is Leaflet-internal but the reliable liveness check
+    return !!el && el.isConnected && !!map._leaflet_id;
+  } catch {
+    return false;
+  }
+}
+
+/** Run a Leaflet view operation safely (map may unmount mid-animation). */
+function safeView(map: L.Map, fn: () => void) {
+  if (!mapAlive(map)) return;
+  try {
+    map.stop(); // cancel any in-flight pan/zoom animation first
+    fn();
+  } catch {
+    /* map torn down between the check and the call — ignore */
+  }
+}
+
+/**
+ * Fit map to the data ONCE per mount (first non-empty set of points).
+ * Polling updates must not re-yank the viewport nor animate into a
+ * potentially-unmounting container (the "_leaflet_pos" crash).
+ */
 export function FitBounds({ points }: { points: Array<[number, number]> }) {
   const map = useMap();
+  const fitted = useRef(false);
   const key = useMemo(() => points.map((p) => p.join(",")).join(";"), [points]);
   useEffect(() => {
-    if (points.length === 0) return;
-    if (points.length === 1) { map.setView(points[0], 14); return; }
-    map.fitBounds(L.latLngBounds(points.map(([a, b]) => L.latLng(a, b))), { padding: [40, 40] });
+    if (fitted.current || points.length === 0) return;
+    fitted.current = true;
+    safeView(map, () => {
+      if (points.length === 1) map.setView(points[0], 14, { animate: false });
+      else map.fitBounds(L.latLngBounds(points.map(([a, b]) => L.latLng(a, b))),
+        { padding: [40, 40], animate: false });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, map]);
   return null;
@@ -154,7 +186,9 @@ export function LocationPicker({
 
 function Recenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
-  useEffect(() => { map.setView([lat, lng], Math.max(map.getZoom(), 14)); }, [lat, lng, map]);
+  useEffect(() => {
+    safeView(map, () => map.setView([lat, lng], Math.max(map.getZoom(), 14), { animate: false }));
+  }, [lat, lng, map]);
   return null;
 }
 
